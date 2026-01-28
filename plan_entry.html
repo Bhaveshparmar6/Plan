@@ -27,8 +27,11 @@ button{margin-top:12px;padding:10px;border:0;background:#1f3a5f;color:#fff;borde
 </div>
 
 <script>
+<script>
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyWelRFcWNA6Cmqj1XQNePUeFL0UpnSJm9TNDM-38Piq3rjo6uKlYdlqrctmyhawawb/exec";
+
 function save(){
-  var q = `?action=planentry
+  var q = WEB_APP_URL + `?action=planentry
   &date=${date.value}
   &from=${from.value}
   &to=${to.value}
@@ -36,9 +39,9 @@ function save(){
   &installation=${inst.value}
   &entryby=${by.value}`;
 
-  fetch(q).then(r=>r.text()).then(t=>{
-    msg.innerText=t;
-  });
+  fetch(q)
+    .then(r => r.text())
+    .then(t => msg.innerText = t);
 }
 </script>
 </body>
