@@ -7,11 +7,11 @@
 <style>
 body{
   font-family:"Segoe UI",Roboto,Arial;
-  background:#f1f3f6;
+  background:#eef2f5;
   margin:0;
 }
 header{
-  background:#00695c;
+  background:#0f3d3e;
   color:#fff;
   padding:14px;
   font-size:18px;
@@ -19,29 +19,34 @@ header{
   font-weight:600;
 }
 .container{
-  padding:16px;
-  max-width:500px;
+  padding:20px;
+  max-width:520px;
   margin:auto;
 }
 .card{
   background:#fff;
-  padding:16px;
-  border-radius:12px;
-  box-shadow:0 2px 6px rgba(0,0,0,0.2);
+  padding:20px;
+  border-radius:14px;
+  box-shadow:0 4px 10px rgba(0,0,0,0.15);
 }
+label{font-weight:600}
 input,select{
   width:100%;
   padding:12px;
-  margin-top:8px;
-  margin-bottom:12px;
+  margin-top:6px;
+  margin-bottom:14px;
   border-radius:8px;
   border:1px solid #ccc;
   font-size:14px;
 }
+input:focus,select:focus{
+  outline:none;
+  border-color:#0f3d3e;
+}
 button{
   width:100%;
   padding:14px;
-  background:#00695c;
+  background:#0f3d3e;
   color:#fff;
   border:none;
   border-radius:10px;
@@ -50,7 +55,38 @@ button{
 }
 button:hover{opacity:0.9}
 .back{
-  background:#888;
+  background:#777;
+  margin-top:10px;
+}
+.success{
+  margin-top:14px;
+  padding:12px;
+  background:#d4edda;
+  color:#155724;
+  border-radius:8px;
+  display:none;
+  text-align:center;
+  font-weight:600;
+}
+
+/* ===== MODAL POPUP ===== */
+.modal{
+  position:fixed;
+  top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,0.5);
+  display:none;
+  align-items:center;
+  justify-content:center;
+}
+.modal-content{
+  background:#fff;
+  padding:20px;
+  border-radius:12px;
+  width:90%;
+  max-width:400px;
+}
+.modal h3{text-align:center;margin-top:0}
+.modal button{
   margin-top:10px;
 }
 </style>
@@ -63,6 +99,12 @@ button:hover{opacity:0.9}
 <div class="container">
 <div class="card">
 
+<label>Installation</label>
+<select id="installation" onchange="loadFeeders()"></select>
+
+<label>Feeder</label>
+<select id="feeder"></select>
+
 <label>Date</label>
 <input type="date" id="date">
 
@@ -72,71 +114,145 @@ button:hover{opacity:0.9}
 <label>To Time</label>
 <input type="time" id="to">
 
-<label>Feeder</label>
-<input type="text" id="feeder" placeholder="FEEDER-1">
-
-<label>Installation</label>
-<input type="text" id="installation">
-
 <label>Entry By</label>
-<input type="text" id="entryby">
+<input type="text" id="entryby" readonly>
 
-<button onclick="savePlan()">SAVE PLAN</button>
+<button onclick="savePlan()">SUBMIT PLAN SHUTDOWN</button>
 <button class="back" onclick="goBack()">⬅ Back</button>
 
+<div id="successMsg" class="success">
+  ✅ Plan Shutdown Entry Submitted Successfully
 </div>
+
+</div>
+</div>
+
+<!-- ===== REMINDER MODAL ===== -->
+<div class="modal" id="reminderModal">
+  <div class="modal-content">
+    <h3>🔔 Tomorrow Plan Shutdown</h3>
+    <div id="reminderText"></div>
+    <button onclick="closeModal()">OK</button>
+  </div>
 </div>
 
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzbXYhYWYBFXw3GnTdzFtDvC5XXCfc_sGWifRr0ghWQwVCPs-L0GH55dTm866V9DbmYHA/exec"; // <-- apna URL
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw4QEoIL_CD47UpR735rRQYrYPNBWunhK7DvfLvMjg83Lqf0n1BDTHVcvF6GfCoXUOiow/exec";
 
-// ============ SAVE ============
+// ===== USER CONFIG (SIMULATED LOGIN) =====
+const LOGGED_USER = "Bhavesh Parmar";
+const USER_INSTALLATION = "CPP PLANT";
+
+// ===== INSTALLATION → FEEDER MAP =====
+const feederMap = {
+  "CPP PLANT":["FEEDER-1","FEEDER-2","FEEDER-3"],
+  "GGS":["FEEDER-A","FEEDER-B"],
+  "DRILLING":["RIG-1","RIG-2"]
+};
+
+// ===== INIT =====
+window.onload = function(){
+  loadInstallations();
+  document.getElementById("entryby").value = LOGGED_USER;
+  showPopupReminder();
+};
+
+// ===== LOAD INSTALLATIONS =====
+function loadInstallations(){
+  let ins = document.getElementById("installation");
+  ins.innerHTML = "";
+  Object.keys(feederMap).forEach(k=>{
+    let opt = document.createElement("option");
+    opt.value = k;
+    opt.textContent = k;
+    if(k === USER_INSTALLATION) opt.selected = true;
+    ins.appendChild(opt);
+  });
+  loadFeeders();
+}
+
+// ===== LOAD FEEDERS =====
+function loadFeeders(){
+  let ins = document.getElementById("installation").value;
+  let fd = document.getElementById("feeder");
+  fd.innerHTML = "";
+  feederMap[ins].forEach(f=>{
+    let opt = document.createElement("option");
+    opt.value = f;
+    opt.textContent = f;
+    fd.appendChild(opt);
+  });
+}
+
+// ===== SAVE =====
 function savePlan(){
+
+  let date = dateEl().value;
+  let from = fromEl().value;
+  let to   = toEl().value;
+
+  if(!date || !from || !to){
+    alert("All fields are mandatory");
+    return;
+  }
 
   let params = new URLSearchParams({
     action:"plan",
-    date:document.getElementById("date").value,
-    from:document.getElementById("from").value,
-    to:document.getElementById("to").value,
-    feeder:document.getElementById("feeder").value,
-    installation:document.getElementById("installation").value,
-    entryby:document.getElementById("entryby").value
+    date:date,
+    from:from,
+    to:to,
+    feeder:feederEl().value,
+    installation:installationEl().value,
+    entryby:entryByEl().value
   });
 
-  fetch(SCRIPT_URL,{
-    method:"POST",
-    body:params
-  })
+  fetch(SCRIPT_URL,{method:"POST",body:params})
   .then(r=>r.text())
-  .then(res=>{
-    alert(res);
+  .then(()=>{
+    document.getElementById("successMsg").style.display="block";
     clearForm();
   });
 }
 
-// ============ POPUP REMINDER ============
+// ===== POPUP REMINDER =====
+function showPopupReminder(){
 fetch(SCRIPT_URL+"?action=getreminder")
 .then(r=>r.json())
 .then(data=>{
   if(data.length>0){
-    let msg="🔔 TOMORROW PLAN SHUTDOWN:\n\n";
+    let html="";
     data.forEach(x=>{
-      msg +=
-        "Feeder: "+x.feeder+"\n"+
-        "Time: "+x.from+" to "+x.to+"\n"+
-        "Installation: "+x.installation+"\n\n";
+      html += `
+        <p><b>Feeder:</b> ${x.feeder}<br>
+        <b>Time:</b> ${x.from} to ${x.to}<br>
+        <b>Installation:</b> ${x.installation}</p>
+      `;
     });
-    alert(msg);
+    document.getElementById("reminderText").innerHTML = html;
+    document.getElementById("reminderModal").style.display="flex";
   }
 });
+}
 
-// ============ UTILS ============
+function closeModal(){
+  document.getElementById("reminderModal").style.display="none";
+}
+
+// ===== UTILS =====
 function clearForm(){
-  document.querySelectorAll("input").forEach(i=>i.value="");
+  dateEl().value="";
+  fromEl().value="";
+  toEl().value="";
 }
 function goBack(){
   window.open("index.html","_self");
 }
+function dateEl(){return document.getElementById("date")}
+function fromEl(){return document.getElementById("from")}
+function toEl(){return document.getElementById("to")}
+function feederEl(){return document.getElementById("feeder")}
+function installationEl(){return document.getElementById("installation")}
+function entryByEl(){return document.getElementById("entryby")}
 </script>
 
 </body>
