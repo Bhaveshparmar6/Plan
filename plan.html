@@ -6,7 +6,7 @@
 
 <style>
 body{
-  font-family:"Segoe UI",Roboto,Arial;
+  font-family:Segoe UI,Arial;
   background:#eef2f5;
   margin:0;
 }
@@ -20,238 +20,126 @@ header{
 }
 .container{
   padding:20px;
-  max-width:520px;
+  max-width:600px;
   margin:auto;
 }
 .card{
   background:#fff;
-  padding:20px;
-  border-radius:14px;
-  box-shadow:0 4px 10px rgba(0,0,0,0.15);
+  padding:15px;
+  border-radius:12px;
+  margin-bottom:15px;
+  box-shadow:0 3px 10px rgba(0,0,0,.1);
 }
-label{font-weight:600}
-input,select{
+input,button{
   width:100%;
-  padding:12px;
-  margin-top:6px;
-  margin-bottom:14px;
-  border-radius:8px;
-  border:1px solid #ccc;
-  font-size:14px;
-}
-input:focus,select:focus{
-  outline:none;
-  border-color:#0f3d3e;
+  padding:10px;
+  margin-top:10px;
+  font-size:15px;
 }
 button{
-  width:100%;
-  padding:14px;
   background:#0f3d3e;
   color:#fff;
   border:none;
-  border-radius:10px;
-  font-size:16px;
   cursor:pointer;
 }
-button:hover{opacity:0.9}
-.back{
-  background:#777;
-  margin-top:10px;
-}
-.success{
-  margin-top:14px;
-  padding:12px;
-  background:#d4edda;
-  color:#155724;
-  border-radius:8px;
-  display:none;
-  text-align:center;
-  font-weight:600;
-}
-
-/* ===== MODAL POPUP ===== */
-.modal{
-  position:fixed;
-  top:0;left:0;right:0;bottom:0;
-  background:rgba(0,0,0,0.5);
-  display:none;
-  align-items:center;
-  justify-content:center;
-}
-.modal-content{
-  background:#fff;
-  padding:20px;
-  border-radius:12px;
-  width:90%;
-  max-width:400px;
-}
-.modal h3{text-align:center;margin-top:0}
-.modal button{
-  margin-top:10px;
-}
+.red{background:#ff9999}
+.green{background:#ccffcc}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th,td{border:1px solid #ccc;padding:6px;text-align:center}
 </style>
 </head>
+
 <body>
+
 <header>PLAN SHUTDOWN ENTRY</header>
 
 <div class="container">
+
 <div class="card">
-
-<label>Installation</label>
-<select id="installation" onchange="loadFeeders()"></select>
-
-<label>Feeder</label>
-<select id="feeder"></select>
-
-<label>Date</label>
-<input type="date" id="date">
-
-<label>From Time</label>
-<input type="time" id="from">
-
-<label>To Time</label>
-<input type="time" id="to">
-
-<label>Entry By</label>
-<input type="text" id="entryby" readonly>
-
-<button onclick="savePlan()">SUBMIT PLAN SHUTDOWN</button>
-<button class="back" onclick="goBack()">⬅ Back</button>
-
-<div id="successMsg" class="success">
-  ✅ Plan Shutdown Entry Submitted Successfully
-</div>
-</div>
+  <input id="date" type="date">
+  <input id="from" type="time">
+  <input id="to" type="time">
+  <input id="feeder" placeholder="Feeder Name">
+  <input id="installation" placeholder="Installation">
+  <input id="entryby" placeholder="Entry By">
+  <button onclick="savePlan()">SAVE PLAN</button>
 </div>
 
-<!-- ===== REMINDER MODAL ===== -->
-<div class="modal" id="reminderModal">
-  <div class="modal-content">
-    <h3>🔔 Tomorrow Plan Shutdown</h3>
-    <div id="reminderText"></div>
-    <button onclick="closeModal()">OK</button>
-  </div>
+<div class="card">
+  <h3>Plan List</h3>
+  <table id="planTable"></table>
+</div>
+
 </div>
 
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw4QEoIL_CD47UpR735rRQYrYPNBWunhK7DvfLvMjg83Lqf0n1BDTHVcvF6GfCoXUOiow/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxDymDX1nIM1njFg0gDdDWXF4o-3l7nzDK3BNNyrvcVjeQz5JpUB9GQ4jCNg-FU_42lhg/exec";
 
-// ===== USER CONFIG (SIMULATED LOGIN) =====
-const LOGGED_USER = "Bhavesh Parmar";
-const USER_INSTALLATION = "CPP PLANT";
+// Page load par list auto
+loadPlans();
 
-// ===== INSTALLATION → FEEDER MAP =====
-const feederMap = {
-  "CPP PLANT":["FEEDER-1","FEEDER-2","FEEDER-3"],
-  "GGS":["FEEDER-A","FEEDER-B"],
-  "DRILLING":["RIG-1","RIG-2"]
-};
-
-// ===== INIT =====
-window.onload = function(){
-  loadInstallations();
-  document.getElementById("entryby").value = LOGGED_USER;
-  showPopupReminder();
-};
-
-// ===== LOAD INSTALLATIONS =====
-function loadInstallations(){
-  let ins = document.getElementById("installation");
-  ins.innerHTML = "";
-  Object.keys(feederMap).forEach(k=>{
-    let opt = document.createElement("option");
-    opt.value = k;
-    opt.textContent = k;
-    if(k === USER_INSTALLATION) opt.selected = true;
-    ins.appendChild(opt);
-  });
-  loadFeeders();
-}
-
-// ===== LOAD FEEDERS =====
-function loadFeeders(){
-  let ins = document.getElementById("installation").value;
-  let fd = document.getElementById("feeder");
-  fd.innerHTML = "";
-  feederMap[ins].forEach(f=>{
-    let opt = document.createElement("option");
-    opt.value = f;
-    opt.textContent = f;
-    fd.appendChild(opt);
-  });
-}
-
-// ===== SAVE =====
 function savePlan(){
 
-  let date = dateEl().value;
-  let from = fromEl().value;
-  let to   = toEl().value;
-
-  if(!date || !from || !to){
-    alert("All fields are mandatory");
-    return;
-  }
-
-  let params = new URLSearchParams({
+  fetch(SCRIPT_URL+"?"+new URLSearchParams({
     action:"plan",
-    date:date,
-    from:from,
-    to:to,
-    feeder:feederEl().value,
-    installation:installationEl().value,
-    entryby:entryByEl().value
-  });
-
-  fetch(SCRIPT_URL,{method:"POST",body:params})
+    feeder:feeder.value.trim(),
+    date:date.value,
+    from:from.value,
+    to:to.value,
+    installation:installation.value.trim(),
+    entryby:entryby.value.trim()
+  }))
   .then(r=>r.text())
-  .then(()=>{
-    document.getElementById("successMsg").style.display="block";
-    clearForm();
+  .then(a=>{
+
+    if(a==="FEEDER_EXISTS"){
+      alert("⚠ Feeder entry already exists");
+      return;
+    }
+
+    if(a==="SUCCESS" || a==="PLAN SHUTDOWN SAVED"){
+      alert("✅ Plan saved successfully");
+      loadPlans(); // auto refresh
+      return;
+    }
+
+    alert(a);
   });
 }
 
-// ===== POPUP REMINDER =====
-function showPopupReminder(){
-fetch(SCRIPT_URL+"?action=getreminder")
-.then(r=>r.json())
-.then(data=>{
-  if(data.length>0){
-    let html="";
-    data.forEach(x=>{
-      html += `
-        <p><b>Feeder:</b> ${x.feeder}<br>
-        <b>Time:</b> ${x.from} to ${x.to}<br>
-        <b>Installation:</b> ${x.installation}</p>
-      `;
+function loadPlans(){
+
+  fetch(SCRIPT_URL+"?action=getallplans")
+  .then(r=>r.json())
+  .then(data=>{
+
+    let html="<tr><th>Date</th><th>From</th><th>To</th><th>Feeder</th><th>Installation</th></tr>";
+
+    let today=new Date();
+    today.setHours(0,0,0,0);
+
+    // last entry top
+    data.reverse().forEach(r=>{
+
+      let d=new Date(r.date);
+      d.setHours(0,0,0,0);
+
+      let cls = (d >= today) ? "red" : "green";
+
+      html+=`
+        <tr class="${cls}">
+          <td>${r.date}</td>
+          <td>${r.from}</td>
+          <td>${r.to}</td>
+          <td>${r.feeder}</td>
+          <td>${r.installation}</td>
+        </tr>`;
     });
-    document.getElementById("reminderText").innerHTML = html;
-    document.getElementById("reminderModal").style.display="flex";
-  }
-});
-}
 
-function closeModal(){
-  document.getElementById("reminderModal").style.display="none";
+    planTable.innerHTML = html;
+  });
 }
-
-// ===== UTILS =====
-function clearForm(){
-  dateEl().value="";
-  fromEl().value="";
-  toEl().value="";
-}
-function goBack(){
-  window.open("index.html","_self");
-}
-function dateEl(){return document.getElementById("date")}
-function fromEl(){return document.getElementById("from")}
-function toEl(){return document.getElementById("to")}
-function feederEl(){return document.getElementById("feeder")}
-function installationEl(){return document.getElementById("installation")}
-function entryByEl(){return document.getElementById("entryby")}
 </script>
+
 </body>
 </html>
-
-
